@@ -1,0 +1,27 @@
+# GitHub Pages configuration for FastPOS Landing Page
+# This file configures Jekyll for GitHub Pages hosting
+
+# Site settings
+title: FastPOS - Vận Hành Tinh Gọn
+description: Hệ thống quản lý bán hàng thông minh, giúp doanh nghiệp bán lẻ vận hành tinh gọn và tăng trưởng vượt trội.
+baseurl: "/FastPOS"
+url: "https://MarcusDMartian.github.io"
+
+# Build settings
+markdown: kramdown
+
+# Exclude files from Jekyll build (since this is a Vite/React app)
+exclude:
+  - node_modules
+  - package.json
+  - package-lock.json
+  - tsconfig.json
+  - vite.config.ts
+  - README.md
+  - .gitignore
+  - .env.local
+  - src
+
+# Include dist folder for GitHub Pages
+include:
+  - dist
