@@ -7,3 +7,10 @@ interface ImportMetaEnv {
 interface ImportMeta {
     readonly env: ImportMetaEnv;
 }
+
+interface Window {
+    aistudio?: {
+        hasSelectedApiKey: () => Promise<boolean>;
+        openSelectKey: () => Promise<void>;
+    };
+}

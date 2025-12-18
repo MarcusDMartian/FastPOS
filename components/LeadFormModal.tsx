@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Loader2, CheckCircle, Send, User, Mail, Phone, Building, Ticket } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Button } from './Button';
 
 interface LeadFormModalProps {
@@ -56,9 +56,9 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
   const [ticketId, setTicketId] = useState('');
 
   // Validation Check: Name, Email, Phone are required
-  const isFormValid = formData.name.trim().length > 0 && 
-                      formData.email.trim().length > 0 && 
-                      formData.phone.trim().length > 0;
+  const isFormValid = formData.name.trim().length > 0 &&
+    formData.email.trim().length > 0 &&
+    formData.phone.trim().length > 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -89,10 +89,10 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
       console.groupEnd();
 
       // 3. GENERATE AUTO-REPLY EMAIL USING AI (Customer Facing)
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: `
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+      const result = await model.generateContent(`
           Bạn là hệ thống trả lời tự động của công ty FastPOS.
           Khách hàng tên là "${formData.name}" vừa đăng ký tư vấn qua website.
           Mã hồ sơ (Ticket ID) của họ là: ${newTicketId}.
@@ -103,12 +103,11 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
           4. Nhắc đến Mã hồ sơ ${newTicketId} để họ tiện theo dõi.
           5. Thông báo rằng chuyên viên tư vấn sẽ liên hệ lại trong vòng 2 giờ làm việc.
           6. Ký tên: Ban Quản Trị FastPOS.
-        `,
-      });
+        `);
 
-      const emailContent = response.text || "Cảm ơn bạn đã đăng ký. Chúng tôi sẽ liên hệ sớm.";
+      const emailContent = result.response.text() || "Cảm ơn bạn đã đăng ký. Chúng tôi sẽ liên hệ sớm.";
       setGeneratedEmail(emailContent);
-      
+
       setStep('success');
     } catch (error) {
       console.error("Error submitting form:", error);
@@ -121,10 +120,10 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden relative flex flex-col max-h-[90vh]">
-        
+
         {/* Close Button */}
-        <button 
-          onClick={onClose} 
+        <button
+          onClick={onClose}
           className="absolute top-4 right-4 p-2 bg-gray-100 hover:bg-gray-200 rounded-full transition-colors z-10"
         >
           <X size={20} className="text-gray-500" />
@@ -136,7 +135,7 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
             <div className="p-8">
               <div className="text-center mb-8">
                 <div className="w-12 h-12 bg-accent-orange/10 text-accent-orange rounded-2xl flex items-center justify-center mx-auto mb-4">
-                   <Send size={24} />
+                  <Send size={24} />
                 </div>
                 <h2 className="text-2xl font-bold text-gray-900 mb-2">Đăng Ký Tư Vấn</h2>
                 <p className="text-sm text-gray-500">
@@ -199,10 +198,10 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
                 </div>
 
                 <div className="pt-4">
-                  <Button 
-                    type="submit" 
-                    fullWidth 
-                    variant="primary" 
+                  <Button
+                    type="submit"
+                    fullWidth
+                    variant="primary"
                     disabled={loading || !isFormValid}
                     className={`py-4 text-lg shadow-accent-orange/30 ${!isFormValid ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title={!isFormValid ? "Vui lòng điền đầy đủ thông tin bắt buộc" : "Gửi thông tin"}
@@ -216,44 +215,44 @@ export const LeadFormModal: React.FC<LeadFormModalProps> = ({ onClose, source = 
                     )}
                   </Button>
                 </div>
-                
+
                 <p className="text-xs text-center text-gray-400 mt-4">
-                   Thông tin của bạn được bảo mật an toàn theo chính sách của FastPOS.
+                  Thông tin của bạn được bảo mật an toàn theo chính sách của FastPOS.
                 </p>
               </form>
             </div>
           ) : (
             <div className="p-8 h-full flex flex-col">
-               <div className="text-center mb-6">
-                 <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                   <CheckCircle size={32} />
-                 </div>
-                 <h2 className="text-2xl font-bold text-gray-900">Đăng Ký Thành Công!</h2>
-                 <p className="text-gray-500 mt-2">Hệ thống đã ghi nhận yêu cầu của bạn.</p>
-                 
-                 {/* Display Ticket ID */}
-                 <div className="mt-4 inline-flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
-                    <Ticket size={16} className="text-gray-500" />
-                    <span className="font-mono font-bold text-gray-700">{ticketId}</span>
-                 </div>
-                 <p className="text-xs text-gray-400 mt-2">(Email thông báo đã được gửi đến Admin)</p>
-               </div>
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
+                  <CheckCircle size={32} />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900">Đăng Ký Thành Công!</h2>
+                <p className="text-gray-500 mt-2">Hệ thống đã ghi nhận yêu cầu của bạn.</p>
 
-               <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 overflow-y-auto mb-6">
-                 <div className="flex items-center gap-2 mb-3 border-b border-gray-200 pb-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">AI Auto-Reply Sent</span>
-                 </div>
-                 <div className="prose prose-sm prose-gray max-w-none">
-                    <p className="whitespace-pre-line text-gray-700 italic">
-                      {generatedEmail}
-                    </p>
-                 </div>
-               </div>
+                {/* Display Ticket ID */}
+                <div className="mt-4 inline-flex items-center gap-2 bg-gray-100 px-4 py-2 rounded-lg border border-gray-200">
+                  <Ticket size={16} className="text-gray-500" />
+                  <span className="font-mono font-bold text-gray-700">{ticketId}</span>
+                </div>
+                <p className="text-xs text-gray-400 mt-2">(Email thông báo đã được gửi đến Admin)</p>
+              </div>
 
-               <Button onClick={onClose} fullWidth variant="secondary">
-                 Đóng
-               </Button>
+              <div className="bg-gray-50 rounded-2xl p-6 border border-gray-100 flex-1 overflow-y-auto mb-6">
+                <div className="flex items-center gap-2 mb-3 border-b border-gray-200 pb-2">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">AI Auto-Reply Sent</span>
+                </div>
+                <div className="prose prose-sm prose-gray max-w-none">
+                  <p className="whitespace-pre-line text-gray-700 italic">
+                    {generatedEmail}
+                  </p>
+                </div>
+              </div>
+
+              <Button onClick={onClose} fullWidth variant="secondary">
+                Đóng
+              </Button>
             </div>
           )}
         </div>
