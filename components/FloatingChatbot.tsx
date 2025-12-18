@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, Minimize2, Sparkles, MapPin } from 'lucide-react';
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export const FloatingChatbot: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -22,16 +22,16 @@ export const FloatingChatbot: React.FC = () => {
     }
   }, [messages, isOpen]);
 
-  const getChatSession = () => {
+  const getChatSession = async () => {
     if (!chatSessionRef.current) {
-      const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_API_KEY });
-      // UPDATED: Use gemini-2.5-flash with googleMaps tool
-      chatSessionRef.current = ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-          tools: [{ googleMaps: {} }],
-          systemInstruction: 'Bạn là trợ lý AI chuyên nghiệp của FastPOS. Địa chỉ trụ sở công ty tại 66 Nguyễn Huệ, Quận 1, TP.HCM. Nhiệm vụ của bạn là hỗ trợ khách hàng tìm hiểu về các giải pháp quản lý bán hàng, tồn kho, nhân sự của FastPOS. Hãy trả lời ngắn gọn, súc tích, thân thiện và sử dụng tiếng Việt. Nếu khách hàng hỏi về địa điểm, hãy sử dụng Google Maps để cung cấp thông tin chính xác.'
-        }
+      const genAI = new GoogleGenerativeAI(import.meta.env.VITE_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-1.5-flash",
+        systemInstruction: 'Bạn là trợ lý AI chuyên nghiệp của FastPOS. Địa chỉ trụ sở công ty tại 66 Nguyễn Huệ, Quận 1, TP.HCM. Nhiệm vụ của bạn là hỗ trợ khách hàng tìm hiểu về các giải pháp quản lý bán hàng, tồn kho, nhân sự của FastPOS. Hãy trả lời ngắn gọn, súc tích, thân thiện và sử dụng tiếng Việt. Nếu khách hàng hỏi về địa điểm, hãy sử dụng Google Maps để cung cấp thông tin chính xác.'
+      });
+
+      chatSessionRef.current = model.startChat({
+        history: [],
       });
     }
     return chatSessionRef.current;
@@ -45,24 +45,19 @@ export const FloatingChatbot: React.FC = () => {
     setLoading(true);
 
     try {
-      const chat = getChatSession();
-      const result = await chat.sendMessage({ message: userMsg });
+      const chat = await getChatSession();
+      const result = await chat.sendMessage(userMsg);
+      const response = await result.response;
+      const text = response.text();
 
-      let links: string[] = [];
-      // Handle Maps Grounding Metadata extraction
-      if (result.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-        result.candidates[0].groundingMetadata.groundingChunks.forEach((chunk: any) => {
-          if (chunk.web?.uri) {
-            links.push(chunk.web.uri);
-          }
-        });
-      }
+      // Note: Grounding metadata handling might differ in this SDK or require specific setup.
+      // For now we extract just text. If grounding is needed, it requires specific tool config in getGenerativeModel.
+      // Assuming basic chat for now to fix the core crash.
 
-      setMessages(prev => [...prev, { role: 'model', text: result.text || "Xin lỗi, tôi không thể phản hồi lúc này.", links }]);
+      setMessages(prev => [...prev, { role: 'model', text: text }]);
     } catch (error) {
       console.error("Chat Error:", error);
       setMessages(prev => [...prev, { role: 'model', text: "Đã có lỗi kết nối. Vui lòng thử lại sau." }]);
-      // Reset session on error in case of invalid state
       chatSessionRef.current = null;
     } finally {
       setLoading(false);
@@ -130,8 +125,8 @@ export const FloatingChatbot: React.FC = () => {
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex flex-col ${msg.role === 'user' ? 'items-end' : 'items-start'}`}>
                 <div className={`max-w-[85%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user'
-                    ? 'bg-accent-orange text-white rounded-tr-sm'
-                    : 'bg-white border border-gray-100 text-gray-700 rounded-tl-sm'
+                  ? 'bg-accent-orange text-white rounded-tr-sm'
+                  : 'bg-white border border-gray-100 text-gray-700 rounded-tl-sm'
                   }`}>
                   {msg.text}
                 </div>
